@@ -6,7 +6,6 @@ import ErrorModal from '../UI/ErrorModal'
 import Search from './Search'
 
 const ingredientsReducer = (currentIngredients, action) => {
-  console.log(action)
   switch (action.type) {
     case 'SET':
       return action.ingredients
@@ -19,11 +18,33 @@ const ingredientsReducer = (currentIngredients, action) => {
   }
 }
 
+const httpReducer = (currHttpState, action) => {
+  switch (action.type) {
+    case 'SEND':
+      return {
+        loading: true,
+        error: null,
+      }
+    case 'RESPONSE':
+      return { ...currHttpState, loading: false }
+    case 'ERROR':
+      return { loading: false, error: action.errorMessage }
+    case 'CLEAR':
+      return { ...currHttpState, error: null }
+    default:
+      throw new Error('Should not get there!')
+  }
+}
+
 const Ingredients = () => {
   const [userIngredients, dispatch] = useReducer(ingredientsReducer, [])
+  const [httpState, dispatchHttp] = useReducer(httpReducer, {
+    loading: false,
+    error: null,
+  })
   // const [userIngredients, setUserIngredients] = useState([])
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState('')
+  // const [isLoading, setIsLoading] = useState(false)
+  // const [error, setError] = useState('')
 
   const filteredIngredientsHandler = useCallback((filteredIngredients) => {
     // setUserIngredients(filteredIngredients)
@@ -35,7 +56,7 @@ const Ingredients = () => {
   }, [userIngredients])
 
   const addIngredientHandler = (ingredient) => {
-    setIsLoading(true)
+    dispatchHttp({ type: 'SEND' })
     fetch('https://hooks-573e9.firebaseio.com/ingredients.json', {
       method: 'POST',
       body: JSON.stringify(ingredient),
@@ -44,7 +65,7 @@ const Ingredients = () => {
       },
     })
       .then((response) => {
-        setIsLoading(false)
+        dispatchHttp({ type: 'RESPONSE' })
         return response.json()
       })
       .then((responseData) => {
@@ -57,13 +78,13 @@ const Ingredients = () => {
           ingredient: { id: responseData.name, ...ingredient },
         })
       })
-      .catch(() => {
-        setError('Something went wrong!')
+      .catch((error) => {
+        dispatchHttp({ type: 'ERROR', errorMessage: error.message })
       })
   }
 
   const removeIngredientHandler = (ingredientId) => {
-    setIsLoading(true)
+    dispatchHttp({ type: 'SEND' })
     fetch(
       `https://hooks-573e9.firebaseio.com/ingredients/${ingredientId}.json`,
       {
@@ -71,7 +92,7 @@ const Ingredients = () => {
       },
     )
       .then(() => {
-        setIsLoading(false)
+        dispatchHttp({ type: 'RESPONSE' })
         // setUserIngredients((prevIngredients) =>
         //   prevIngredients.filter(
         //     (ingredient) => ingredient.id !== ingredientId,
@@ -79,21 +100,23 @@ const Ingredients = () => {
         // )
         dispatch({ type: 'DELETE', id: ingredientId })
       })
-      .catch(() => {
-        setError('Something went wrong!')
+      .catch((error) => {
+        dispatchHttp({ type: 'ERROR', errorMessage: error.message })
       })
   }
 
   const clearError = () => {
-    setError(null)
+    dispatchHttp({ type: 'CLEAR' })
   }
 
   return (
     <div className="App">
-      {error && <ErrorModal onClose={clearError}>{error}</ErrorModal>}
+      {httpState.error && (
+        <ErrorModal onClose={clearError}>{httpState.error}</ErrorModal>
+      )}
       <IngredientForm
         onAddIngredient={addIngredientHandler}
-        loading={isLoading}
+        loading={httpState.loading}
       />
 
       <section>
