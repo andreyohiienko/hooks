@@ -11,6 +11,10 @@ const Ingredients = () => {
     setUserIngredients(filteredIngredients)
   }, [])
 
+  useEffect(() => {
+    console.log('rendering ingredients', userIngredients)
+  }, [userIngredients])
+
   const addIngredientHandler = (ingredient) => {
     fetch('https://hooks-573e9.firebaseio.com/ingredients.json', {
       method: 'POST',
